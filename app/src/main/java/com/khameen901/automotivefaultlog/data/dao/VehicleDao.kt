@@ -1,13 +1,26 @@
-package com.khameen901.automotivefaultlog.data.entities
+package com.khameen901.automotivefaultlog.data.dao
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import com.khameen901.automotivefaultlog.data.entities.VehicleInfo
 
-@Entity(tableName = "fault_images")
-data class FaultImage(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0L,
-    val faultRecordId: Long,
-    val imagePath: String,
-    val createdAt: Long = System.currentTimeMillis()
-)
+@Dao
+interface VehicleDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVehicle(vehicle: VehicleInfo): Long
+
+    @Update
+    suspend fun updateVehicle(vehicle: VehicleInfo)
+
+    @Query("SELECT * FROM vehicles WHERE id = :id")
+    suspend fun getVehicleById(id: Long): VehicleInfo?
+
+    @Query("SELECT * FROM vehicles WHERE vin = :vin LIMIT 1")
+    suspend fun getVehicleByVin(vin: String?): VehicleInfo?
+
+    @Query("DELETE FROM vehicles WHERE id = :id")
+    suspend fun deleteVehicle(id: Long)
+}

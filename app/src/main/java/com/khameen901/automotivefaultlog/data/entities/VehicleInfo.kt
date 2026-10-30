@@ -1,41 +1,26 @@
-package com.khameen901.automotivefaultlog.ui.theme
+package com.khameen901.automotivefaultlog.data.entities
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
 
-private val LightColors = lightColorScheme(
-    primary = PrimaryBlue,
-    secondary = AccentTeal,
-    background = SurfaceLight,
-    surface = CardBackground,
-    onPrimary = White,
-    onSecondary = White,
-    onBackground = PrimaryDark,
-    onSurface = PrimaryDark,
-    error = ErrorRed,
-    onError = White
+@Entity(
+    tableName = "vehicles",
+    indices = [Index(value = ["vin"], unique = true)]
 )
-
-private val DarkColors = darkColorScheme(
-    primary = PrimaryBlue,
-    secondary = AccentTeal,
-    background = PrimaryDark,
-    surface = PrimaryDark,
-    onPrimary = White,
-    onSecondary = White,
-    onBackground = White,
-    onSurface = White,
-    error = ErrorRed,
-    onError = White
+data class VehicleInfo(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0L,
+    val manufacturer: String,
+    val model: String,
+    val productionYear: Int,
+    val fuelType: String,
+    val engineType: String,
+    val engineDisplacement: String,
+    val numberOfCylinders: Int,
+    val engineCode: String,
+    val transmissionType: String,
+    val drivetrain: String,
+    val vin: String? = null
 )
-
-@Composable
-fun AutomotiveFaultLogTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = LightColors,
-        content = content
-    )
-}
