@@ -1,20 +1,234 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AutomotiveFaultLog">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:screenOrientation="portrait">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>
+package com.khameen901.automotivefaultlog.ui.screens.addedit
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.khameen901.automotivefaultlog.domain.model.FaultFormData
+import com.khameen901.automotivefaultlog.utils.ImageStorage
+import com.khameen901.automotivefaultlog.viewmodel.FaultViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddEditFaultScreen(
+    navController: NavController,
+    viewModel: FaultViewModel,
+    faultId: Long = 0L
+) {
+    val context = LocalContext.current
+    val selectedFault by viewModel.selectedFault.collectAsState()
+    var form by remember { mutableStateOf(FaultFormData()) }
+    var imagePaths by remember { mutableStateOf(listOf<String>()) }
+
+    val pickImagesLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10)
+    ) { uris: List<Uri> ->
+        val copiedPaths = uris.mapNotNull { ImageStorage.copyUriToAppStorage(context, it) }
+        imagePaths = (imagePaths + copiedPaths).distinct()
+        form = form.copy(imagePaths = imagePaths)
+    }
+
+    LaunchedEffect(faultId) {
+        if (faultId > 0L) {
+            viewModel.getFaultById(faultId)
+        }
+    }
+
+    LaunchedEffect(selectedFault) {
+        val detail = selectedFault ?: return@LaunchedEffect
+        val vehicle = detail.vehicle
+        form = FaultFormData(
+            id = detail.faultRecord.id,
+            vehicleId = vehicle?.id ?: 0L,
+            manufacturer = vehicle?.manufacturer.orEmpty(),
+            model = vehicle?.model.orEmpty(),
+            productionYear = vehicle?.productionYear ?: 0,
+            fuelType = vehicle?.fuelType.orEmpty(),
+            engineType = vehicle?.engineType.orEmpty(),
+            engineDisplacement = vehicle?.engineDisplacement.orEmpty(),
+            cylinderCount = vehicle?.cylinderCount.orEmpty(),
+            engineCode = vehicle?.engineCode.orEmpty(),
+            transmissionType = vehicle?.transmissionType.orEmpty(),
+            drivetrain = vehicle?.drivetrain.orEmpty(),
+            vin = vehicle?.vin.orEmpty(),
+            customerComplaint = detail.faultRecord.customerComplaint,
+            symptoms = detail.faultRecord.symptoms,
+            dtcCodes = detail.dtcCodes.map { it.code },
+            controlModule = detail.faultRecord.controlModule,
+            faultStatus = detail.faultRecord.faultStatus,
+            freezeFrame = detail.faultRecord.freezeFrame,
+            diagnosticTests = detail.diagnosticTests.map { it.name },
+            electricalMeasurements = detail.faultRecord.electricalMeasurements,
+            testedComponents = detail.faultRecord.testedComponents,
+            suspectedCause = detail.faultRecord.suspectedCause,
+            confirmedRootCause = detail.faultRecord.confirmedRootCause,
+            repairProcedure = detail.faultRecord.repairProcedure,
+            finalVerificationResult = detail.faultRecord.finalVerificationResult,
+            notes = detail.faultRecord.notes,
+            recordingDate = detail.faultRecord.recordingDate,
+            imagePaths = detail.images.map { it.filePath }
+        )
+        imagePaths = detail.images.map { it.filePath }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (faultId > 0L) "تعديل حالة العطل" else "إضافة حالة عطل جديدة") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("بيانات السيارة")
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(value = form.manufacturer, onValueChange = { form = form.copy(manufacturer = it) }, label = { Text("الشركة المصنعة") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = form.model, onValueChange = { form = form.copy(model = it) }, label = { Text("الموديل") }, modifier = Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(value = form.productionYear.toString(), onValueChange = { form = form.copy(productionYear = it.toIntOrNull() ?: 0) }, label = { Text("سنة الإنتاج") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = form.fuelType, onValueChange = { form = form.copy(fuelType = it) }, label = { Text("نوع الوقود") }, modifier = Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(value = form.engineType, onValueChange = { form = form.copy(engineType = it) }, label = { Text("نوع المحرك") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = form.engineDisplacement, onValueChange = { form = form.copy(engineDisplacement = it) }, label = { Text("سعة المحرك") }, modifier = Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(value = form.cylinderCount, onValueChange = { form = form.copy(cylinderCount = it) }, label = { Text("عدد الأسطوانات") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = form.engineCode, onValueChange = { form = form.copy(engineCode = it) }, label = { Text("رمز المحرك") }, modifier = Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(value = form.transmissionType, onValueChange = { form = form.copy(transmissionType = it) }, label = { Text("نوع ناقل الحركة") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = form.drivetrain, onValueChange = { form = form.copy(drivetrain = it) }, label = { Text("نوع الدفع") }, modifier = Modifier.weight(1f))
+                    }
+                    OutlinedTextField(value = form.vin, onValueChange = { form = form.copy(vin = it) }, label = { Text("VIN") }, modifier = Modifier.fillMaxWidth())
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("معلومات العطل")
+                    OutlinedTextField(value = form.customerComplaint, onValueChange = { form = form.copy(customerComplaint = it) }, label = { Text("شكوى العميل") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.symptoms, onValueChange = { form = form.copy(symptoms = it) }, label = { Text("الأعراض") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.dtcCodes.joinToString(", "), onValueChange = { form = form.copy(dtcCodes = it.split(',').map { code -> code.trim() }.filter { it.isNotBlank() }) }, label = { Text("رموز DTC") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.controlModule, onValueChange = { form = form.copy(controlModule = it) }, label = { Text("وحدة التحكم") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.faultStatus, onValueChange = { form = form.copy(faultStatus = it) }, label = { Text("حالة العطل") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.freezeFrame, onValueChange = { form = form.copy(freezeFrame = it) }, label = { Text("Freeze Frame") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.diagnosticTests.joinToString(", "), onValueChange = { form = form.copy(diagnosticTests = it.split(',').map { test -> test.trim() }.filter { it.isNotBlank() }) }, label = { Text("الاختبارات التشخ��صية") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.electricalMeasurements, onValueChange = { form = form.copy(electricalMeasurements = it) }, label = { Text("القياسات الكهربائية") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.testedComponents, onValueChange = { form = form.copy(testedComponents = it) }, label = { Text("المكونات المختبرة") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.suspectedCause, onValueChange = { form = form.copy(suspectedCause = it) }, label = { Text("السبب المشتبه") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.confirmedRootCause, onValueChange = { form = form.copy(confirmedRootCause = it) }, label = { Text("السبب الجذري المؤكد") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.repairProcedure, onValueChange = { form = form.copy(repairProcedure = it) }, label = { Text("إجراءات الإصلاح") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.finalVerificationResult, onValueChange = { form = form.copy(finalVerificationResult = it) }, label = { Text("نتيجة التحقق النهائية") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = form.notes, onValueChange = { form = form.copy(notes = it) }, label = { Text("ملاحظات") }, modifier = Modifier.fillMaxWidth())
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = { pickImagesLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("إضافة صور متعددة")
+                    }
+                    if (imagePaths.isNotEmpty()) {
+                        Text("الصور الحالية")
+                        imagePaths.forEach { path ->
+                            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                Text(path.substringAfterLast('/'))
+                                IconButton(onClick = {
+                                    imagePaths = imagePaths.filterNot { it == path }
+                                    form = form.copy(imagePaths = imagePaths)
+                                    ImageStorage.deleteImageFile(path)
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Button(
+                onClick = {
+                    viewModel.saveFault(form.copy(imagePaths = imagePaths))
+                    navController.popBackStack()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("حفظ السجل")
+            }
+        }
+    }
+}
+

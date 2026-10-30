@@ -4,9 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import com.khameen901.automotivefaultlog.navigation.AppNavHost
 import com.khameen901.automotivefaultlog.ui.theme.AutomotiveFaultLogTheme
 
 class MainActivity : ComponentActivity() {
@@ -14,10 +15,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AutomotiveFaultLogTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    AutomotiveFaultLogApp()
-                }
+            AutomotiveFaultLogTheme(darkTheme = isSystemInDarkTheme()) {
+                AppNavHost()
             }
         }
     }
