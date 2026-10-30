@@ -2,7 +2,6 @@ package com.khameen901.automotivefaultlog.data.repository
 
 import android.content.Context
 import android.net.Uri
-import androidx.core.net.toUri
 import com.khameen901.automotivefaultlog.data.dao.FaultWithVehicle
 import com.khameen901.automotivefaultlog.data.database.FaultDatabase
 import com.khameen901.automotivefaultlog.data.entities.DiagnosticTest
@@ -18,7 +17,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.util.Locale
 
 class FaultRepository(private val context: Context) {
     private val database = FaultDatabase.getInstance(context)
@@ -32,19 +30,18 @@ class FaultRepository(private val context: Context) {
         imagePaths: List<String>
     ) = withContext(Dispatchers.IO) {
         database.runInTransaction {
-            val resolvedVehicleId: Long = if (vehicle.id > 0L) {
+            val vehicleId = if (vehicle.id > 0L) {
                 database.vehicleDao().updateVehicle(vehicle)
                 vehicle.id
             } else {
                 database.vehicleDao().insertVehicle(vehicle)
             }
 
-            val resolvedFaultRecord = faultRecord.copy(vehicleId = resolvedVehicleId)
-            val faultId = if (resolvedFaultRecord.id > 0L) {
-                database.faultDao().updateFaultRecord(resolvedFaultRecord)
-                resolvedFaultRecord.id
+            val faultId = if (faultRecord.id > 0L) {
+                database.faultDao().updateFaultRecord(faultRecord.copy(vehicleId = vehicleId))
+                faultRecord.id
             } else {
-                database.faultDao().insertFaultRecord(resolvedFaultRecord)
+                database.faultDao().insertFaultRecord(faultRecord.copy(vehicleId = vehicleId))
             }
 
             database.faultDao().deleteDtcCodesForFault(faultId)
@@ -56,9 +53,7 @@ class FaultRepository(private val context: Context) {
             }
 
             diagnosticTests.filter { it.testName.isNotBlank() }.forEach { test ->
-                database.faultDao().insertDiagnosticTest(
-                    test.copy(faultRecordId = faultId)
-                )
+                database.faultDao().insertDiagnosticTest(test.copy(faultRecordId = faultId))
             }
 
             imagePaths.filter { it.isNotBlank() }.forEach { path ->
@@ -69,7 +64,7 @@ class FaultRepository(private val context: Context) {
 
     suspend fun deleteFault(faultId: Long) = withContext(Dispatchers.IO) {
         database.runInTransaction {
-            val fault = database.faultDao().getFaultById(faultId) ?: return@runInTransaction
+            val record = database.faultDao().getFaultById(faultId) ?: return@runInTransaction
             database.faultDao().getImagesForFault(faultId).forEach { image ->
                 deleteFileIfExists(File(image.imagePath))
             }
@@ -77,18 +72,20 @@ class FaultRepository(private val context: Context) {
             database.faultDao().deleteDiagnosticTestsForFault(faultId)
             database.faultDao().deleteImagesForFault(faultId)
             database.faultDao().deleteFaultRecord(faultId)
-            database.vehicleDao().deleteVehicle(fault.vehicleId)
+            database.vehicleDao().deleteVehicle(record.vehicleId)
         }
     }
 
-    suspend fun backupDatabaseTo(targetPath: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun savePhotoFromUri(uri: Uri): String? = withContext(Dispatchers.IO) {
+        copyUriToAppStorage(context, uri)
+    }
+
+    suspend fun backupDatabaseTo(uri: Uri): Boolean = withContext(Dispatchers.IO) {
         try {
             val dbFile = context.getDatabasePath("automotive_fault_log.db")
             if (!dbFile.exists()) return@withContext false
-            val backupFile = File(targetPath)
-            backupFile.parentFile?.mkdirs()
-            FileInputStream(dbFile).use { input ->
-                FileOutputStream(backupFile).use { output ->
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                FileInputStream(dbFile).use { input ->
                     input.copyTo(output)
                 }
             }
@@ -110,9 +107,5 @@ class FaultRepository(private val context: Context) {
         } catch (_: Exception) {
             false
         }
-    }
-
-    suspend fun savePhotoFromUri(uri: Uri): String? = withContext(Dispatchers.IO) {
-        copyUriToAppStorage(context, uri)
     }
 }

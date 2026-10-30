@@ -1,23 +1,16 @@
 package com.khameen901.automotivefaultlog.ui.screens
 
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.Delete
-
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -25,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -32,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -42,7 +35,6 @@ import com.khameen901.automotivefaultlog.data.entities.FaultRecord
 import com.khameen901.automotivefaultlog.data.entities.VehicleInfo
 import com.khameen901.automotivefaultlog.viewmodel.FaultViewModel
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 @Composable
 fun AddEditFaultScreen(
@@ -50,9 +42,7 @@ fun AddEditFaultScreen(
     viewModel: FaultViewModel,
     selectedRecord: FaultWithVehicle?
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     val initialVehicle = selectedRecord?.vehicle ?: VehicleInfo(
         manufacturer = "",
         model = "",
@@ -100,15 +90,19 @@ fun AddEditFaultScreen(
     var finalVerificationResult by remember { mutableStateOf(initialRecord.finalVerificationResult ?: "") }
     var notes by remember { mutableStateOf(initialRecord.notes ?: "") }
     var dtcText by remember { mutableStateOf(selectedRecord?.dtcCodes?.joinToString(", ") { it.code } ?: "") }
-    var testText by remember { mutableStateOf(selectedRecord?.tests?.joinToString("\n") { "${it.testName}: ${it.result}" } ?: "") }
-    val imagePaths = remember { mutableStateListOf<String>() }
-    selectedRecord?.images?.map { it.imagePath }?.let { imagePaths.clear(); imagePaths.addAll(it) }
+    var diagnosticText by remember { mutableStateOf(selectedRecord?.tests?.joinToString("\n") { "${it.testName}: ${it.result}" } ?: "") }
+
+    val imagePaths = remember(selectedRecord?.fault?.id) {
+        mutableStateListOf<String>().apply {
+            addAll(selectedRecord?.images?.map { it.imagePath } ?: emptyList())
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris: List<Uri> ->
-        scope.launch {
-            uris.forEach { uri ->
+    ) { uris ->
+        uris.forEach { uri ->
+            scope.launch {
                 viewModel.savePhotoFromUri(uri)?.let { savedPath ->
                     if (!imagePaths.contains(savedPath)) imagePaths.add(savedPath)
                 }
@@ -140,24 +134,44 @@ fun AddEditFaultScreen(
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("معلومات المركبة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = manufacturer, onValueChange = { manufacturer = it }, label = { Text("المصنّع") }, modifier = Modifier.fillMaxWidth()) }
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("الموديل") }, modifier = Modifier.fillMaxWidth()) }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = manufacturer, onValueChange = { manufacturer = it }, label = { Text("المصنّع") }, modifier = Modifier.fillMaxWidth())
+                        }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("الموديل") }, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = productionYear, onValueChange = { productionYear = it }, label = { Text("سنة الإنتاج") }, modifier = Modifier.fillMaxWidth()) }
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = fuelType, onValueChange = { fuelType = it }, label = { Text("نوع الوقود") }, modifier = Modifier.fillMaxWidth()) }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = productionYear, onValueChange = { productionYear = it }, label = { Text("سنة الإنتاج") }, modifier = Modifier.fillMaxWidth())
+                        }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = fuelType, onValueChange = { fuelType = it }, label = { Text("نوع الوقود") }, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = engineType, onValueChange = { engineType = it }, label = { Text("نوع المحرك") }, modifier = Modifier.fillMaxWidth()) }
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = engineDisplacement, onValueChange = { engineDisplacement = it }, label = { Text("السعة") }, modifier = Modifier.fillMaxWidth()) }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = engineType, onValueChange = { engineType = it }, label = { Text("نوع المحرك") }, modifier = Modifier.fillMaxWidth())
+                        }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = engineDisplacement, onValueChange = { engineDisplacement = it }, label = { Text("السعة") }, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = numberOfCylinders, onValueChange = { numberOfCylinders = it }, label = { Text("عدد الأسطوانات") }, modifier = Modifier.fillMaxWidth()) }
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = engineCode, onValueChange = { engineCode = it }, label = { Text("رمز المحرك") }, modifier = Modifier.fillMaxWidth()) }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = numberOfCylinders, onValueChange = { numberOfCylinders = it }, label = { Text("عدد الأسطوانات") }, modifier = Modifier.fillMaxWidth())
+                        }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = engineCode, onValueChange = { engineCode = it }, label = { Text("رمز المحرك") }, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = transmissionType, onValueChange = { transmissionType = it }, label = { Text("نوع ناقل الحركة") }, modifier = Modifier.fillMaxWidth()) }
-                        Column(Modifier.weight(1f)) { OutlinedTextField(value = drivetrain, onValueChange = { drivetrain = it }, label = { Text("نظام الدفع") }, modifier = Modifier.fillMaxWidth()) }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = transmissionType, onValueChange = { transmissionType = it }, label = { Text("نوع ناقل الحركة") }, modifier = Modifier.fillMaxWidth())
+                        }
+                        Column(Modifier.weight(1f)) {
+                            OutlinedTextField(value = drivetrain, onValueChange = { drivetrain = it }, label = { Text("نظام الدفع") }, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                     OutlinedTextField(value = vin, onValueChange = { vin = it }, label = { Text("VIN (اختياري)") }, modifier = Modifier.fillMaxWidth())
                 }
@@ -186,6 +200,7 @@ fun AddEditFaultScreen(
                     OutlinedTextField(value = repairProcedure, onValueChange = { repairProcedure = it }, label = { Text("إجراءات الإصلاح") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = finalVerificationResult, onValueChange = { finalVerificationResult = it }, label = { Text("نتيجة التحقق النهائية") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("ملاحظات") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = diagnosticText, onValueChange = { diagnosticText = it }, label = { Text("اختبارات تفصيلية (اسم: النتيجة)") }, modifier = Modifier.fillMaxWidth())
                 }
             }
         }
@@ -197,15 +212,22 @@ fun AddEditFaultScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text("الصور المرفقة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Button(onClick = { photoPickerLauncher.launch("image/*") }) {
                             Text("إضافة صورة")
                         }
                     }
+
                     if (imagePaths.isNotEmpty()) {
                         imagePaths.forEach { path ->
-                            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
                                 Text(path.substringAfterLast('/'))
                                 Button(onClick = { imagePaths.remove(path) }) {
                                     Text("حذف")
@@ -234,7 +256,7 @@ fun AddEditFaultScreen(
                         drivetrain = drivetrain.trim(),
                         vin = vin.trim().ifBlank { null }
                     )
-                    val record = FaultRecord(
+                    val fault = FaultRecord(
                         id = initialRecord.id,
                         vehicleId = initialRecord.vehicleId,
                         customerComplaint = customerComplaint.trim(),
@@ -253,13 +275,13 @@ fun AddEditFaultScreen(
                         createdAt = initialRecord.createdAt,
                         updatedAt = System.currentTimeMillis()
                     )
-                    val dtcs = dtcText.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-                    val tests = testText.split('\n').mapNotNull { line ->
-                        val parts = line.split(':', limit = 2)
+                    val dtcCodes = dtcText.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                    val tests = diagnosticText.split('\n').mapNotNull { line ->
+                        val parts = line.split(":", limit = 2)
                         if (parts.size == 2) DiagnosticTest(testName = parts[0].trim(), result = parts[1].trim()) else null
                     }
                     scope.launch {
-                        viewModel.saveFault(vehicle, record, dtcs, tests, imagePaths)
+                        viewModel.saveFault(vehicle, fault, dtcCodes, tests, imagePaths.toList())
                     }
                     navController.popBackStack()
                 }, modifier = Modifier.weight(1f)) {

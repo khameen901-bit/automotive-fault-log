@@ -9,19 +9,20 @@ fun copyUriToAppStorage(context: Context, uri: Uri): String? {
     return try {
         val folder = File(context.filesDir, "fault_images")
         if (!folder.exists()) folder.mkdirs()
-        val fileName = "fault_${UUID.randomUUID()}.jpg"
-        val targetFile = File(folder, fileName)
+        val target = File(folder, "fault_${UUID.randomUUID()}.jpg")
         context.contentResolver.openInputStream(uri)?.use { input ->
-            targetFile.outputStream().use { output ->
+            target.outputStream().use { output ->
                 input.copyTo(output)
             }
         }
-        targetFile.absolutePath
+        target.absolutePath
     } catch (_: Exception) {
         null
     }
 }
 
 fun deleteFileIfExists(file: File) {
-    if (file.exists()) file.delete()
+    if (file.exists()) {
+        file.delete()
+    }
 }

@@ -74,7 +74,10 @@ fun AutomotiveFaultLogApp(
         }
 
         composable(AppScreen.Settings.route) {
-            SettingsScreen(navController = navController, viewModel = viewModel)
+            SettingsScreen(
+                navController = navController,
+                viewModel = viewModel
+            )
         }
     }
 }

@@ -4,18 +4,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
     primary = PrimaryBlue,
     secondary = AccentTeal,
     background = SurfaceLight,
     surface = CardBackground,
-    onPrimary = Color.White,
-    onSecondary = Color.White,
+    onPrimary = White,
+    onSecondary = White,
     onBackground = PrimaryDark,
     onSurface = PrimaryDark,
     error = ErrorRed,
-    onError = Color.White
+    onError = White
 )
 
 private val DarkColors = darkColorScheme(
@@ -23,12 +24,12 @@ private val DarkColors = darkColorScheme(
     secondary = AccentTeal,
     background = PrimaryDark,
     surface = PrimaryDark,
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onBackground = Color.White,
-    onSurface = Color.White,
+    onPrimary = White,
+    onSecondary = White,
+    onBackground = White,
+    onSurface = White,
     error = ErrorRed,
-    onError = Color.White
+    onError = White
 )
 
 @Composable

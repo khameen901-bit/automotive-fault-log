@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class DiagnosticTest(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
-    val faultRecordId: Long,
+    val faultRecordId: Long = 0L,
     val testName: String,
     val result: String,
     val notes: String? = null

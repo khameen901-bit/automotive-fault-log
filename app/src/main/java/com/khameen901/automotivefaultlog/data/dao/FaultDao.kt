@@ -1,23 +1,21 @@
 package com.khameen901.automotivefaultlog.data.dao
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.Embedded
+import androidx.room.Relation
+import com.khameen901.automotivefaultlog.data.entities.DiagnosticTest
+import com.khameen901.automotivefaultlog.data.entities.DtcCode
+import com.khameen901.automotivefaultlog.data.entities.FaultImage
+import com.khameen901.automotivefaultlog.data.entities.FaultRecord
 import com.khameen901.automotivefaultlog.data.entities.VehicleInfo
 
-@Dao
-interface VehicleDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertVehicle(vehicle: VehicleInfo): Long
-
-    @Update
-    suspend fun updateVehicle(vehicle: VehicleInfo)
-
-    @Query("SELECT * FROM vehicles WHERE id = :id")
-    suspend fun getVehicleById(id: Long): VehicleInfo?
-
-    @Query("DELETE FROM vehicles WHERE id = :id")
-    suspend fun deleteVehicle(id: Long)
-}
+data class FaultWithVehicle(
+    @Embedded val fault: FaultRecord,
+    @Relation(parentColumn = "vehicleId", entityColumn = "id")
+    val vehicle: VehicleInfo?,
+    @Relation(parentColumn = "id", entityColumn = "faultRecordId")
+    val dtcCodes: List<DtcCode> = emptyList(),
+    @Relation(parentColumn = "id", entityColumn = "faultRecordId")
+    val tests: List<DiagnosticTest> = emptyList(),
+    @Relation(parentColumn = "id", entityColumn = "faultRecordId")
+    val images: List<FaultImage> = emptyList()
+)
